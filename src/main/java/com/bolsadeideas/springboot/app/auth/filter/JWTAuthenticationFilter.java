@@ -10,6 +10,8 @@ import javax.servlet.ServletException;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
+import io.jsonwebtoken.Jwts;
+import io.jsonwebtoken.SignatureAlgorithm;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
@@ -80,17 +82,23 @@ public class JWTAuthenticationFilter extends UsernamePasswordAuthenticationFilte
 	@Override
 	protected void successfulAuthentication(HttpServletRequest request, HttpServletResponse response, FilterChain chain,
 			Authentication authResult) throws IOException, ServletException {
+		String username = ((User) authResult.getPrincipal()).getUsername();
 
-		String token = jwtService.create(authResult);
-		
+		//String token = jwtService.create(authResult);
+		String token = Jwts.builder().setSubject(username).signWith(SignatureAlgorithm.HS512, "123456".getBytes())
+						.compact();
+
+		//response.addHeader("Authorization", "Bearer " + token);
 		response.addHeader(JWTServiceImpl.HEADER_STRING, JWTServiceImpl.TOKEN_PREFIX + token);
 		
 		Map<String, Object> body = new HashMap<String, Object>();
 		body.put("token", token);
 		body.put("user", (User) authResult.getPrincipal());
 		body.put("mensaje", String.format("Hola %s, has iniciado sesión con éxito!", ((User)authResult.getPrincipal()).getUsername()) );
-		
-		response.getWriter().write(new ObjectMapper().writeValueAsString(body));
+
+
+		//response se devuelve de forma automática, response se encuentra en javax.servlet desde siempre
+		response.getWriter().write(new ObjectMapper().writeValueAsString(body)); //serialización json
 		response.setStatus(200);
 		response.setContentType("application/json");
 	}
